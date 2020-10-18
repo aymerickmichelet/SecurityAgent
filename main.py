@@ -15,11 +15,10 @@
 
 import asyncio
 import discord
-import time
 from discord.ext import commands
 from discord.utils import get
 
-client = commands.Bot(command_prefix = "!")
+client = commands.Bot(command_prefix="!")
 tocken = "NzU5ODc2NTU5Nzc5MTM1NTI5.X3D4MQ.vNF_4CtAIKqb16yih5AxA4uzy_8"
 
 logs_channel = client.get_channel(760878352658726912)
@@ -32,11 +31,8 @@ async def on_ready():
 async def on_member_join(member):
     print(str(member) + " vient de rejoindre le serveur.")
 
-    role = get(member.guild.roles, name = "EPSI-B3")
-    print(member.guild_permissions)
-    print(member.guild_permissions.manage_roles)
-    
-    await member.edit(roles=[role])
+    # print(member.guild)
+    # print(client.guilds)
 
     await formWelcome(member)
 
@@ -66,7 +62,6 @@ async def formWelcome(member):
 
     await member.send(content=text1+"\n"+text2+"\n"+text3)
 
-    # time.sleep(5)
     await asyncio.sleep(5)
     
     def check(message):
@@ -117,10 +112,16 @@ async def formWelcome(member):
 
     # role = discord.utils.get(member.server.roles, name=values[2].upper()+"-"+values[3].upper())
 
-    await member.edit(nick=values[0].lower()+"."+values[1].lower())
+    role = get(member.guild.roles, name="EPSI-B3")
+    aymnms = member.guild.get_member(member.guild.owner_id)
 
+    print(role) # role
+    print(aymnms) # member
+
+    await member.edit(nick=values[0].lower()+"."+values[1].lower())
+    await aymnms.add_roles(role)
 
 client.run(tocken)
 
-
+# gestion user leave serveur pendant discussion mp
 
