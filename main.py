@@ -21,13 +21,13 @@ intents = discord.Intents.default()
 intents.members = True
 
 client = commands.Bot(command_prefix="!", intents=intents)
-tocken = "NzU5ODc2NTU5Nzc5MTM1NTI5.X3D4MQ.vNF_4CtAIKqb16yih5AxA4uzy_8"
+tocken = open('token.txt','r').read()
 
 logs_channel = client.get_channel(760878352658726912)
 
 @client.event
 async def on_ready():
-    print("Botzoula is ready.")
+    print(client.user.name + " is ready.")
 
 @client.event
 async def on_member_join(member):
