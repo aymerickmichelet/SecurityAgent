@@ -17,7 +17,10 @@ import asyncio
 import discord
 from discord.ext import commands
 
-client = commands.Bot(command_prefix="!")
+intents = discord.Intents.default()
+intents.members = True
+
+client = commands.Bot(command_prefix="!", intents=intents)
 tocken = "NzU5ODc2NTU5Nzc5MTM1NTI5.X3D4MQ.vNF_4CtAIKqb16yih5AxA4uzy_8"
 
 logs_channel = client.get_channel(760878352658726912)
