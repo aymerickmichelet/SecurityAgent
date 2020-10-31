@@ -10,19 +10,18 @@ Tâches:
 Rôles:
     Administrateur
     Professeur
-    Etudiant
-        (BDE/BDS/BDA)
-        Délégué
-        EPSI-I2
-        EPSI-I1
-        EPSI-B3
-        EPSI-B2
-        EPSI-B1
-        WIS-I2
-        WIS-I1
-        WIS-B3
-        WIS-B2
-        WIS-B1
+    (BDE/BDS/BDA)
+    Délégué
+    EPSI-I2
+    EPSI-I1
+    EPSI-B3
+    EPSI-B2
+    EPSI-B1
+    WIS-I2
+    WIS-I1
+    WIS-B3
+    WIS-B2
+    WIS-B1
     Ancien
 
 Channels:
