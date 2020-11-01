@@ -17,36 +17,19 @@ import asyncio
 
 import discord
 from discord.ext import commands
+
 from user import User
+from config import Config
 
 intents = discord.Intents.default()
 intents.members = True
 
+config = Config()
+
 bot = commands.Bot(command_prefix="!", intents=intents)
-token = open('token.txt', 'r').read()
+token = config.getToken()
 
 new_user = None
-text_timeout = "Bon, à bientôt j'espère...\n**`Vous venez de vous faire kick du serveur`**"
-text_wrong_answer = "Désolé, je n'ai pas bien compris... pouvez-vous répéter ?"
-text_repeat = "Bon, je vais recommencer le questionnaire..."
-text_welcome = "Bienvenue sur le discord **EPSI/WIS** !"
-text_42 = "T'as tout compris !\n**`Vous venez de vous faire kick du serveur`**"
-text1 = "Salut, je vais vous demander de répondre à quelques questions" \
-        " afin de vous placez correctement dans le discord !\n" \
-        "Merci d'y répondre sérieusement."
-text2 = "Pourriez-vous me donner votre prénom ?"
-text3 = "Pourriez-vous me donner votre nom de famille ?"
-text4 = "Etes-vous un étudiant, un professeur ou un administrateur ?\n" \
-        "*réponses acceptées: `Etudiant`, `Professeur`, `Administrateur`*"
-text5 = "Dans quelle école êtes-vous ?\n" \
-        "*réponses acceptées: `EPSI`, `WIS`*"
-text6 = "Dans quelle promotion rentrez-vous ? \n" \
-        "*réponses acceptées: `B1`, `B2`, `B3`, `I1`, `I2`*"
-text7 = "Pour finir, êtes-vous le délégué de votre promotion ?\n" \
-        "*réponses acceptées: `Oui`, `Non`*"
-text8 = "Ces informations sont correctes ?\n" \
-         "*réponses acceptées: `Oui`, `Non`*"
-
 
 @bot.event
 async def on_ready():
@@ -67,17 +50,19 @@ async def on_member_remove(member):
 
 
 def info_member(user: User):
+    global config
+
     description = new_user.status.capitalize()
     if new_user.status == "ETUDIANT":
         description += " " + new_user.level
     if new_user.delegate == "OUI":
         description += " - Délégué(e)"
 
-    url = "https://user-images.githubusercontent.com/32719398/97791210-2d2cf280-1bd0-11eb-83d4-f6f5aa08ebb0.png"  # epsi
+    url = config.getUrl("epsi_logo")  # epsi
     if new_user.school == "WIS":
-        url = "https://user-images.githubusercontent.com/32719398/97790998-1dacaa00-1bce-11eb-8f0f-e6ff185a7ed0.png"  # wis
+        url = config.getUrl("wis_logo")  # wis
     elif new_user.school == "42":
-        url = "https://user-images.githubusercontent.com/32719398/97790985-08378000-1bce-11eb-9049-a987eed8c176.png" # 42
+        url = config.getUrl("42_logo")  # 42
 
     embed = discord.Embed(color=0x000000, title=new_user.firstname.capitalize() + " " + new_user.lastname.upper(),
                           description=description)
@@ -87,10 +72,12 @@ def info_member(user: User):
 
     return embed
 
+
 async def kick(message: str, reason: str) -> None:
     await new_user.member.send(content=message)
     await new_user.member.kick(reason=reason)
     return None
+
 
 async def ask_question(question: str, response_type: int) -> str:
     # 0 = free
@@ -101,7 +88,7 @@ async def ask_question(question: str, response_type: int) -> str:
     # 5 = confirmation (resume info with embed + closed question)
 
     global new_user
-    global text_wrong_answer
+    global config
 
     if response_type == 5:
         await new_user.member.send(embed=info_member(new_user))
@@ -115,7 +102,7 @@ async def ask_question(question: str, response_type: int) -> str:
         try:
             response = await bot.wait_for("message", timeout=5 * 60, check=check)
         except:
-            await kick(text_timeout, "timeout")
+            await kick(config.getText("timeout"), "timeout")
             return
 
         response = response.content.upper()
@@ -145,44 +132,44 @@ async def ask_question(question: str, response_type: int) -> str:
         if correct:
             return response
         else:
-            await new_user.member.send(content=text_wrong_answer)
+            await new_user.member.send(content=config.getText("wrong_answer"))
             continue
 
 
 async def welcome_form():
     global bot
     global new_user
-    global text1, text2, text3, text4, text5, text6, text7, text8
+    global config
 
-    await new_user.member.send(content=text1)
+    await new_user.member.send(content=config.getText("presentation"))
     await asyncio.sleep(5)
 
     while True:
         new_user = User(member=new_user.member)
-        new_user.firstname = await ask_question(text2, 0)
-        new_user.lastname = await ask_question(text3, 0)
-        new_user.status = await ask_question(text4, 2)
+        new_user.firstname = await ask_question(config.getText("firstname"), 0)
+        new_user.lastname = await ask_question(config.getText("lastname"), 0)
+        new_user.status = await ask_question(config.getText("status"), 2)
         if new_user.status == "ETUDIANT":
-            new_user.school = await ask_question(text5, 3)
-            new_user.level = await ask_question(text6, 4)
-            new_user.delegate = await ask_question(text7, 1)
+            new_user.school = await ask_question(config.getText("school"), 3)
+            new_user.level = await ask_question(config.getText("level"), 4)
+            new_user.delegate = await ask_question(config.getText("delegate"), 1)
             role = discord.utils.get(new_user.member.guild.roles,
                                      name=new_user.school + "-" + new_user.level)
         else:
             role = discord.utils.get(new_user.member.guild.roles, name=new_user.status.capitalize())
-        if await ask_question(text8, 5) == "OUI":
+        if await ask_question(config.getText("correct"), 5) == "OUI":
             if new_user.school == "42":
-                await kick(text_42, "42")
+                await kick(config.getText("42"), "42")
                 return
             else:
                 await new_user.member.edit(nick=new_user.firstname.lower() + "." + new_user.lastname.lower())
                 await new_user.member.edit(roles=[role])
                 if new_user.delegate == "OUI":
                     await new_user.member.add_roles(discord.utils.get(new_user.member.guild.roles, name="Délégué"))
-                await new_user.member.send(content=text_welcome)
+                await new_user.member.send(content=config.getText("welcome"))
                 return
         else:
-            await new_user.member.send(content=text_repeat)
+            await new_user.member.send(content=config.getText("repeat"))
             continue
 
 

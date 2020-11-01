@@ -1,0 +1,26 @@
+{
+  "token_path": "token.txt",
+  "text": {
+    "timeout": "Bon, à bientôt j'espère...\n**`Vous venez de vous faire kick du serveur`**",
+    "wrong_answer": "Désolé, je n'ai pas bien compris... pouvez-vous répéter ?",
+    "repeat": "Bon, je vais recommencer le questionnaire...",
+    "42": "T'as tout compris !\n**`Vous venez de vous faire kick du serveur`**",
+    "welcome": "Bienvenue sur le discord **EPSI/WIS** !",
+    "presentation": "Salut, je vais vous demander de répondre à quelques questions afin de vous placez correctement dans le discord !\nMerci d'y répondre sérieusement.",
+    "firstname": "Pourriez-vous me donner votre prénom ?",
+    "lastname": "Pourriez-vous me donner votre nom de famille ?",
+    "status": "Etes-vous un étudiant, un professeur ou un administrateur ?\n*réponses acceptées: `Etudiant`, `Professeur`, `Administrateur`*",
+    "school": "Dans quelle école êtes-vous ?\n*réponses acceptées: `EPSI`, `WIS`*",
+    "level": "Dans quelle promotion rentrez-vous ? \n*réponses acceptées: `B1`, `B2`, `B3`, `I1`, `I2`*",
+    "delegate": "Pour finir, êtes-vous le délégué de votre promotion ?\n*réponses acceptées: `Oui`, `Non`*",
+    "correct": "Ces informations sont correctes ?\n*réponses acceptées: `Oui`, `Non`*"
+  },
+  "embed": {
+
+  },
+  "url": {
+    "epsi_logo": "https://user-images.githubusercontent.com/32719398/97791210-2d2cf280-1bd0-11eb-83d4-f6f5aa08ebb0.png",
+    "wis_logo": "https://user-images.githubusercontent.com/32719398/97790998-1dacaa00-1bce-11eb-8f0f-e6ff185a7ed0.png",
+    "42_logo": "https://user-images.githubusercontent.com/32719398/97790985-08378000-1bce-11eb-9049-a987eed8c176.png"
+  }
+}
