@@ -1,4 +1,4 @@
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
 #                                                                       #
 #                                                                       #
 #   $$$$$$\  $$\   $$\ $$$$$$\$$$$\  $$$$$$$\  $$$$$$\$$$$\   $$$$$$$\  #
@@ -11,145 +11,172 @@
 #            \$$$$$$  |                                                 #
 #             \______/                                                  #
 #                                                                       #
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
 
 import asyncio
+
 import discord
 from discord.ext import commands
+
+from user import User
+from config import Config
 
 intents = discord.Intents.default()
 intents.members = True
 
-client = commands.Bot(command_prefix="!", intents=intents)
-tocken = "NzU5ODc2NTU5Nzc5MTM1NTI5.X3D4MQ.vNF_4CtAIKqb16yih5AxA4uzy_8"
+config = Config()
 
-logs_channel = client.get_channel(760878352658726912)
+bot = commands.Bot(command_prefix="!", intents=intents)
+token = config.getToken()
 
-@client.event
+new_user = None
+
+@bot.event
 async def on_ready():
-    print("Botzoula is ready.")
+    print(bot.user.name + " is ready.")
 
-@client.event
+
+@bot.event
 async def on_member_join(member):
+    global new_user
     print(str(member) + " vient de rejoindre le serveur.")
-    await form_welcome(member)
+    new_user = User(member=member)
+    await welcome_form()
 
-@client.event
+
+@bot.event
 async def on_member_remove(member):
     print(str(member) + " vient de quitter le serveur.")
 
 
-def info_member(member, firstname, lastname, school, level, delegate):
-    embed = discord.Embed(color=0x000000)
-    embed.set_author(name=str(member), icon_url=member.avatar_url)
-    embed.set_thumbnail(
-        url="https://cdn.discordapp.com/icons/619567457123958813/3d33b155ee4c990c7d89b394fee4bbdd.webp?size=128")
-    embed.add_field(name="prénom:", value=firstname, inline=True)
-    embed.add_field(name="nom:", value=lastname, inline=True)
-    embed.add_field(name="école:", value=school, inline=False)
-    embed.add_field(name="level:", value=level, inline=True)
-    embed.add_field(name="delegate:", value=delegate, inline=True)
+def info_member(user: User):
+    global config
+
+    description = new_user.status.capitalize()
+    if new_user.status == "ETUDIANT":
+        description += " " + new_user.level
+    if new_user.delegate == "OUI":
+        description += " - Délégué(e)"
+
+    url = config.getUrl("epsi_logo")  # epsi
+    if new_user.school == "WIS":
+        url = config.getUrl("wis_logo")  # wis
+    elif new_user.school == "42":
+        url = config.getUrl("42_logo")  # 42
+
+    embed = discord.Embed(color=0x000000, title=new_user.firstname.capitalize() + " " + new_user.lastname.upper(),
+                          description=description)
+    embed.set_author(name=new_user.member.name, icon_url=new_user.member.avatar_url)
+    embed.set_thumbnail(url=url)
     embed.set_footer(text="(Agent de Sécurité) - Bot by Aymerick MICHELET")
+
     return embed
 
-async def form_welcome(member):
 
-    global client
+async def kick(message: str, reason: str) -> None:
+    await new_user.member.send(content=message)
+    await new_user.member.kick(reason=reason)
+    return None
 
-    text_timeout = "Bon, à bientôt je l'espère...\n**`Tu viens de te faire kick du serveur`**"
-    text_wrong_answer = "Désolé, je n'ai pas bien compris... tu peux répéter ?"
-    text_alert = "Hey ne m'oublie pas !"
-    text1 = "Salut bienvenue sur le discord de l'**EPSI/WIS Paris** !"
-    text2 = "Pour te placer correctement dans le discord, je vais te demander quelques informations..."
-    text3 = "Merci de bien y répondre car en cas d'erreur, *seul un administrateur pourra corriger le tire*."
-    text4 = "Pourrais-tu me donner ton prénom ?"
-    text5 = "Pourrais-tu me donner ton nom de famille ?"
-    text6 = "... ton école ? \n*réponses acceptées: `EPSI`, `WIS`*"
-    text7 = "Dans quelle promotion rentres-tu ? \n*réponses acceptées: `B1`, `B2`, `B3`, `I1`, `I2`*"
-    text8 = "Pour finir, es-tu délégué de ta promotion ?\n*réponses acceptées: `Oui`, `Non`*"
-    text9 = "Ces informations sont correctes ?\n*réponses acceptées: `Oui`, `Non`*"
-    text10 = "Bon, je vais recommencer le questionnaire..."
-    text11 = "Bienvenue sur le discord !"
 
-    questions = [text4, text5, text6, text7, text8, text9]
-    values = ["", "", "", "", False]
+async def ask_question(question: str, response_type: int) -> str:
+    # 0 = free
+    # 1 = closed question (Oui / Non)
+    # 2 = status (Etudiant / Professeur / Administrateur)
+    # 3 = school (Epsi / Wis)
+    # 4 = level (B1 / B2 / B3 / I1 / I2)
+    # 5 = confirmation (resume info with embed + closed question)
 
-    await member.send(content=text1 + "\n" + text2 + "\n" + text3)
+    global new_user
+    global config
 
+    if response_type == 5:
+        await new_user.member.send(embed=info_member(new_user))
+        response_type = 1
+
+    def check(message):
+        return message.author == new_user.member and message.channel == new_user.member.dm_channel
+
+    while True:
+        await new_user.member.send(content=question)
+        try:
+            response = await bot.wait_for("message", timeout=5 * 60, check=check)
+        except:
+            await kick(config.getText("timeout"), "timeout")
+            return
+
+        response = response.content.upper()
+        correct = False
+        if response_type == 0:  # free
+            correct = True
+        if response_type == 1:  # closed question
+            if response == "OUI" or response == "NON":
+                correct = True
+        elif response_type == 2:  # status
+            if response == "ETUDIANT" \
+                    or response == "PROFESSEUR" \
+                    or response == "ADMINISTRATEUR":
+                correct = True
+        elif response_type == 3:  # school
+            if response == "EPSI" \
+                    or response == "WIS" \
+                    or response == "42":
+                correct = True
+        elif response_type == 4:  # level
+            if response == "B1" \
+                    or response == "B2" \
+                    or response == "B3" \
+                    or response == "I1" \
+                    or response == "I2":
+                correct = True
+        if correct:
+            return response
+        else:
+            await new_user.member.send(content=config.getText("wrong_answer"))
+            continue
+
+
+async def welcome_form():
+    global bot
+    global new_user
+    global config
+
+    await new_user.member.send(content=config.getText("presentation"))
     await asyncio.sleep(5)
 
     while True:
-
-        def check(message):
-            return message.author == member and message.channel == member.dm_channel
-
-        for i in range(0, len(questions)):
-            count_limit = 10
-            count = 0
-            await member.send(content=questions[i])
-            if i != 5:
-                while True:
-                    try:
-                        values[i] = await client.wait_for("message", timeout=30, check=check)
-                    except:
-                        count+=1
-                        if count < count_limit:
-                            await member.send(content=text_alert)
-                            continue
-                        else:
-                            await member.send(content=text_timeout)
-                            await member.kick(reason="No response during the welcome form")
-                            return
-                    msg = values[i].content.upper()
-                    values[i] = values[i].content
-                    if i == 2:
-                        result = msg == "EPSI" or msg == "WIS"
-                    elif i == 3:
-                        result = msg == "B1" or msg == "B2" or msg == "B3" or msg == "I1" or msg == "I2"
-                    elif i == 4:
-                        result = msg == "OUI" or msg == "NON"
-                    else:
-                        result = True
-                    if result:
-                        count = 0
-                        break
-                    else:
-                        await member.send(content=text_wrong_answer)
+        new_user = User(member=new_user.member)
+        new_user.firstname = await ask_question(config.getText("firstname"), 0)
+        new_user.lastname = await ask_question(config.getText("lastname"), 0)
+        new_user.status = await ask_question(config.getText("status"), 2)
+        if new_user.status == "ETUDIANT":
+            new_user.school = await ask_question(config.getText("school"), 3)
+            new_user.level = await ask_question(config.getText("level"), 4)
+            new_user.delegate = await ask_question(config.getText("delegate"), 1)
+            role = discord.utils.get(new_user.member.guild.roles,
+                                     name=new_user.school + "-" + new_user.level)
+        else:
+            role = discord.utils.get(new_user.member.guild.roles, name=new_user.status.capitalize())
+        if await ask_question(config.getText("correct"), 5) == "OUI":
+            if new_user.school == "42":
+                await kick(config.getText("42"), "42")
+                return
             else:
-                await member.send(embed=info_member(member, values[0], values[1], values[2], values[3], values[4]))
-                while True:
-                    try:
-                        msg = await client.wait_for("message", timeout=30, check=check)
-                    except:
-                        count += 1
-                        if count < count_limit:
-                            await member.send(content=text_alert)
-                            continue
-                        else:
-                            await member.send(content=text_timeout)
-                            await member.kick(reason="No response during the welcome form")
-                            return
-                    msg = msg.content.upper()
-                    if msg == "OUI":
-                        role = discord.utils.get(member.guild.roles, name=values[2].upper() + "-" + values[3].upper())
-                        await member.edit(nick=values[0].lower() + "." + values[1].lower())
-                        await member.edit(roles=[role])
-                        await member.send(content=text11)
-                        return
-                    elif msg == "NON":
-                        await member.send(content=text10)
-                        break
-                    else:
-                        result = False
-                    if result:
-                        count = 0
-                        break
-                    else:
-                        await member.send(content=text_wrong_answer)
+                await new_user.member.edit(nick=new_user.firstname.lower() + "." + new_user.lastname.lower())
+                await new_user.member.edit(roles=[role])
+                if new_user.delegate == "OUI":
+                    await new_user.member.add_roles(discord.utils.get(new_user.member.guild.roles, name="Délégué"))
+                await new_user.member.send(content=config.getText("welcome"))
+                return
+        else:
+            await new_user.member.send(content=config.getText("repeat"))
+            continue
 
-client.run(tocken)
 
-# gestion user leave serveur pendant discussion mp
-# faire message channel Accueil de bienvenue à la fin du questionnaire
-# gestion des questions / text dans fichiers config
-# gestion logs (channel logs)
+bot.run(token)
+
+# possibilité de liste les etudiants des B3 avec mails envoyé.
+# possibilité de lister les admins (epsi.fr + bdd)
+# lister professeur ???
+# gérer message error (message envoyé quand member kick)
+# tester plusieurs user silmutanément
