@@ -14,7 +14,7 @@
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
 
 import asyncio
-
+import datetime
 import discord
 from discord.ext import commands
 
@@ -52,11 +52,11 @@ async def on_member_remove(member):
 def info_member(user: User):
     global config
 
-    description = new_user.status.capitalize()
-    if new_user.status == "ETUDIANT":
-        description += " " + new_user.level
+    description = "Promotion: "
+    description += new_user.level
+
     if new_user.delegate == "OUI":
-        description += " - Délégué(e)"
+        description += " - Délégué: Oui"
 
     url = config.getUrl("epsi_logo")  # epsi
     if new_user.school == "WIS":
@@ -68,21 +68,20 @@ def info_member(user: User):
                           description=description)
     embed.set_author(name=new_user.member.name, icon_url=new_user.member.avatar_url)
     embed.set_thumbnail(url=url)
-    embed.set_footer(text="(Agent de Sécurité) - Bot by Aymerick MICHELET")
+    embed.set_footer(text="(SecurityAgent) - Bot by Aymerick MICHELET")
 
     return embed
 
 
-async def kick(message: str, reason: str) -> None:
-    await new_user.member.send(content=message)
-    await new_user.member.kick(reason=reason)
-    return None
+# async def kick(message: str, reason: str) -> None:
+#     await new_user.member.send(content=message)
+#     await new_user.member.kick(reason=reason)
+#     return None
 
 
 async def ask_question(question: str, response_type: int) -> str:
     # 0 = free
     # 1 = closed question (Oui / Non)
-    # 2 = status (Etudiant / Professeur / Administrateur)
     # 3 = school (Epsi / Wis)
     # 4 = level (B1 / B2 / B3 / I1 / I2)
     # 5 = confirmation (resume info with embed + closed question)
@@ -100,9 +99,11 @@ async def ask_question(question: str, response_type: int) -> str:
     while True:
         await new_user.member.send(content=question)
         try:
-            response = await bot.wait_for("message", timeout=5 * 60, check=check)
+            response = await bot.wait_for("message", check=check)
         except:
-            await kick(config.getText("timeout"), "timeout")
+            now = datetime.datetime.now()
+            print(now.day + "/" + now.month + "/" + now.year + " - " + now.hour + ":" + now.minute + ":" + now.second +
+                  " [ERROR] > '' ne répond pas")
             return
 
         response = response.content.upper()
@@ -111,11 +112,6 @@ async def ask_question(question: str, response_type: int) -> str:
             correct = True
         if response_type == 1:  # closed question
             if response == "OUI" or response == "NON":
-                correct = True
-        elif response_type == 2:  # status
-            if response == "ETUDIANT" \
-                    or response == "PROFESSEUR" \
-                    or response == "ADMINISTRATEUR":
                 correct = True
         elif response_type == 3:  # school
             if response == "EPSI" \
@@ -148,15 +144,12 @@ async def welcome_form():
         new_user = User(member=new_user.member)
         new_user.firstname = await ask_question(config.getText("firstname"), 0)
         new_user.lastname = await ask_question(config.getText("lastname"), 0)
-        new_user.status = await ask_question(config.getText("status"), 2)
-        if new_user.status == "ETUDIANT":
-            new_user.school = await ask_question(config.getText("school"), 3)
-            new_user.level = await ask_question(config.getText("level"), 4)
-            new_user.delegate = await ask_question(config.getText("delegate"), 1)
-            role = discord.utils.get(new_user.member.guild.roles,
-                                     name=new_user.school + "-" + new_user.level)
-        else:
-            role = discord.utils.get(new_user.member.guild.roles, name=new_user.status.capitalize())
+        new_user.school = await ask_question(config.getText("school"), 3)
+        new_user.level = await ask_question(config.getText("level"), 4)
+        new_user.delegate = await ask_question(config.getText("delegate"), 1)
+        role = discord.utils.get(new_user.member.guild.roles,
+                                 name=new_user.school + "-" + new_user.level)
+
         if await ask_question(config.getText("correct"), 5) == "OUI":
             if new_user.school == "42":
                 await kick(config.getText("42"), "42")
